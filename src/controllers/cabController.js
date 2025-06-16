@@ -1,23 +1,56 @@
-import Cab from "../models/cab.js";
+import Cab from "../models/cabModel.js";
 
-export const listCabs = async(req,res) =>{
+export const createCab = async(req,res) =>{
   try{
-   const {pickupLocation, dropLocation} = req.body;
+   const {cabNumber,type,lat, lng, capacity, baseFare}= req.body;
 
-   if(!pickupLocation || !dropLocation)
-   {
-    return res.status(400).json({message:'Pick up and Drop Location are required'})
-   }
-   
-   const cabs = await Cab.find();
+const newCab = new Cab({
+  cabNumber,
+  type,
+  location:{
+    type:'Point',
+    coordinates:[parseFloat(lng),parseFloat(lat)],
+  },
+  capacity,
+  baseFare,
+});
 
-   res.status(200).json({message:'Available Cabs fetched successfully',
-      pickupLocation,
-      dropLocation,
-      cabs
-    });
-  }catch(error){
-    console.error('Error fetching cabs:',error.message);
-    res.status(500).json({message:'Server error'});
+await newCab.save();
+
+res.status(201).json({message: 'Cab created successfully',cab:newCab});
+  }catch(err)
+  {
+    res.status(500).json({message:'Error creating cab',error:err.message});
+  }
+};
+
+export const searchCabs = async (req, res) => {
+  try {
+    const { lat, lng, type, radius = 5000 } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ message: 'Latitude and Longitude required' });
+    }
+
+    const baseQuery = {
+      location: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
+          $maxDistance: parseInt(radius),
+        },
+      },
+    };
+
+     if (!type) {
+      const cabs = await Cab.find(baseQuery);
+      const availableTypes = [...new Set(cabs.map(cab => cab.type))];
+      return res.status(200).json({ availableCabTypes: availableTypes });
+    }
+
+    baseQuery.type = type;
+    const nearestCabs = await Cab.find(baseQuery).limit(5);
+    return res.status(200).json({ nearestCabs });
+  } catch (err) {
+    res.status(500).json({ message: 'Error searching cabs', error: err.message });
   }
 };

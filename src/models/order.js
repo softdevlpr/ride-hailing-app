@@ -23,8 +23,17 @@ const orderSchema = new mongoose.Schema({
     type:String,
     required: true,
   },
-  
-});    //definition of schema finishes here
+   status: { 
+    type: String, 
+    enum: ["Booked", "OnTheWay", "Completed", "Cancelled"], 
+    default: "Booked" 
+  },
+  assignedCab :{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:"Cab"
+  }
+},
+  {timestamps:true});    //definition of schema finishes here
 
 const Order = mongoose.model('Order',orderSchema);    //created model Order from schema
 
